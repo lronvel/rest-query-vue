@@ -1,6 +1,6 @@
 {
 	"name": "rest-query-vue",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "The Awesome REST Framework!",
 	"dependencies": {
 		"deepmerge": "^4.0.0",

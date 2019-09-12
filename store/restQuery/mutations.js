@@ -31,8 +31,8 @@ export default {
 	} ,
 
 	setDocument( state , document ) {
-		state.documentsSlugs = { ...state.documentsSlugs , slugId: document._id } ;
-		state.documents = { ...state.documents , id: document } ;
+		state.documentsSlugs = { ...state.documentsSlugs , [document.slugId]: document._id } ;
+		state.documents = { ...state.documents , [document._id]: document } ;
 	} ,
 
 	deleteDocument( state , id ) {
