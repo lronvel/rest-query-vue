@@ -10,12 +10,13 @@ export default {
 		state.collections = { ...state.collections , [queryString]: collection } ;
 	} ,
 	setCollection( state , { queryString , collection } ) {
-		var stateCollection = [] ;
+		var stateCollection = [] ,
+			newDocuments = {} ,
+			newDocumentsSlugs = {} ;
 
-		var newDocuments = {} , newDocumentsSlugs = {} ;
 		for ( let document of collection ) {
 			stateCollection.push( document._id ) ;
-			newDocuments[document._id] = document ;
+			newDocuments[document._id] = { ...state.documents[document._id] , ...document } ;
 			newDocumentsSlugs[document.slugId] = document._id ;
 		}
 
@@ -36,6 +37,7 @@ export default {
 	} ,
 
 	deleteDocument( state , id ) {
+		// FIXME (not important): Delete slug entry too
 		delete state.documents[id] ;
 		state.documents = { ...state.documents } ;
 	}
