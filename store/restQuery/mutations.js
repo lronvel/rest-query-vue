@@ -1,3 +1,8 @@
+// HINTS:
+// setCollectionStatus: use spread operator
+// setDocument & setCollection: merge new document or replace ?
+// documents & collections: test equality before updating ?
+
 export default {
 	setSchema( state , values ) {
 		state.schema = Object.freeze( values ) ;

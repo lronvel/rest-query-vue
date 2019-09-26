@@ -16,12 +16,16 @@ export default {
 	} ,
 	data: function() {
 		return {
-			throttleOptions: {
+			throttledSearch: throttle( this.searchInCollection , 1000 , {
+				maxWait: 500 ,
+				leading: false ,
+				trailing: true
+			} ) ,
+			throttledInput: throttle( this.input , 500 , {
 				// maxWait: 300 ,
 				leading: false ,
 				trailing: true
-			} ,
-			throttleTime: 500 ,
+			} ) ,
 
 			...this.populateLocalData()
 		} ;
@@ -34,14 +38,14 @@ export default {
 			deep: true
 		} ,
 		'$attrs.value': function() {
-			var $attrValue = this.populateLocalData().localValue ;
-			if ( ! isEqual( this.localValue , $attrValue ) ) {
-				this.localValue = $attrValue ;
+			var $attrsValue = this.populateLocalData().localValue ;
+			if ( ! isEqual( this.localValue , $attrsValue ) ) {
+				this.localValue = $attrsValue ;
 			}
 		} ,
 		'inputFilter': function() {
-			this.filters = {} ;
-			this.queryOptionsSet( 'search' , this.inputFilter ) ;
+			// this.search() ;
+			this.throttledSearch() ;
 		}
 	} ,
 	computed: {
@@ -50,11 +54,9 @@ export default {
 		}
 	} ,
 	methods: {
-		throttledInput: function() {
-			if ( ! this.throttledInputFunc ) {
-				this.throttledInputFunc = throttle( this.input , this.throttleTime , this.throttleOptions ) ;
-			}
-			return this.throttledInputFunc() ;
+		searchInCollection: function() {
+			this.filters = {} ;
+			this.queryOptionsSet( 'search' , this.inputFilter ) ;
 		} ,
 		input: function() {
 			this.$emit( 'input' , this.name , this.emitValue ) ;
@@ -73,7 +75,13 @@ export default {
 				}
 				else if ( this.property.type === 'multiLink' ) {
 					if ( Array.isArray( this.$attrs.value ) ) {
-						localValue = this.$attrs.value.map( document => document._id ) ;
+						localValue = this.$attrs.value.map( document => {
+							if ( document._id ) {
+								return document._id ;
+							}
+
+							return document ;
+						} ) ;
 					}
 					else {
 						localValue = this.$attrs.value ;
@@ -95,11 +103,6 @@ export default {
 			return {
 				localValue: localValue ,
 				inputFilter: ''
-			} ;
-		} ,
-		isVisible: function( text ) {
-			return {
-				filtered: ! text.toLowerCase().includes( this.inputFilter.toLowerCase() )
 			} ;
 		}
 	}
