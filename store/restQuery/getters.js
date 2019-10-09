@@ -3,6 +3,7 @@ import doormen from 'doormen/lib/browser.js' ;
 
 doormen.setClientMode( true ) ;
 
+window.doormen = doormen ;
 export default {
 	collection: ( state ) => ( queryObject ) => {
 		var queryString = urls.queryObjectToQueryString( queryObject ) ,

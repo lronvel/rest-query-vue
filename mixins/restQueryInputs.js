@@ -59,6 +59,7 @@ export default {
 			this.queryOptionsSet( 'search' , this.inputFilter ) ;
 		} ,
 		input: function() {
+			console.log( `Input ${this.name} emit: ${this.emitValue}` ) ;
 			this.$emit( 'input' , this.name , this.emitValue ) ;
 		} ,
 		populateLocalData: function() {
