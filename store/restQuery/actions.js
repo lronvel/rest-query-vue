@@ -1,5 +1,6 @@
-import fetcher from '../../lib/fetcher.js' ;
-import urls from '../../lib/urls.js' ;
+import fetcher from '../../lib/fetcher' ;
+import urls from '../../lib/urls' ;
+import formData from '../../lib/formData' ;
 
 export default {
 	fetchSchema( context ) {
@@ -32,7 +33,7 @@ export default {
 	fetchCollection( context , queryObject = {} ) {
 		var url = [context.state.path] ;
 
-		var queryString = urls.queryObjectToQueryString( queryObject ) ;
+		var queryString = urls.queryObjectToQueryString( queryObject , true ) ;
 		if ( queryString ) url.push( queryString ) ;
 
 		var collectionMeta = context.state.collections[queryString] ;
@@ -64,7 +65,7 @@ export default {
 	} ,
 
 	create( context , document ) {
-		document = unFlatten( document ) ;
+		document = formData.unFlatten( document ) ;
 
 		return fetcher( `${context.state.path}` , {
 			method: 'POST' ,
@@ -89,15 +90,16 @@ export default {
 			} ) ;
 	} ,
 
-	update( context , document ) {
+	update( context , patch ) {
 		// doormen.patch.report( context.state.schema , document ) ;
 
-		return fetcher( `${context.state.path}/${document._id}` , {
+		return fetcher( `${context.state.path}/${patch.id}` , {
 			method: 'PATCH' ,
-			body: flatten( document )
+			body: formData.flatten( patch.body )
 		} )
 			.then( () => {
-				context.commit( 'setDocument' , document ) ;
+				context.dispatch( `fetchDocument` , { id: patch.id } ) ;
+				// context.commit( 'mergeDocument' , document ) ;
 				return true ;
 			} )
 			.catch( error => {
@@ -147,40 +149,3 @@ export default {
 		return fetcher( url.join( '?' ) , fetcherOptions ) ;
 	}
 } ;
-
-
-// INFO: Doesn't flatten anything other than Objects
-function flatten( object , basePath = null , globalObject = {} ) {
-	Object.entries( object ).forEach( function( [key , value] ) {
-		let path = basePath ? `${basePath}.${key}` : key ;
-
-		if ( value && value.constructor === Object ) {
-			flatten( value , path , globalObject ) ;
-			return ;
-		}
-
-		globalObject[ path ] = value ;
-	} ) ;
-	return globalObject ;
-}
-
-// INFO: Doesn't unFlatten anything other than Objects
-function unFlatten( data ) {
-	var object = {} ;
-	Object.entries( data ).forEach( function( [key , value] ) {
-		let keys = key.split( '.' ) ;
-
-		let treeObject = object ;
-		for ( let i = 0 ; i < keys.length ; i++ ) {
-			if ( i === keys.length - 1 ) {
-				treeObject[ keys[i] ] = value || null ;
-			}
-			else if ( ! treeObject[ keys[i] ] ) {
-				treeObject[ keys[i] ] = {} ;
-			}
-
-			treeObject = treeObject[ keys[i] ] ;
-		}
-	} ) ;
-	return object ;
-}

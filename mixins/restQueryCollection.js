@@ -1,7 +1,6 @@
-import restQuery from '../mixins/restQuery.js' ;
-import urls from '../lib/urls.js' ;
-import deepmerge from 'deepmerge' ;
-import isEqual from 'lodash.isequal' ;
+import restQuery from '../mixins/restQuery' ;
+import urls from '../lib/urls' ;
+import { cloneDeep , isEqual } from 'lodash-es' ;
 
 export default {
 	mixins: [restQuery] ,
@@ -29,12 +28,18 @@ export default {
 	} ,
 
 	computed: {
+		hasFecthed: function() {
+			return this.collectionMeta ;
+		} ,
+		collectionHasFetched: function() {
+			return this.ready ;
+		} ,
 		collectionReady: function() {
 			// FIXME: need to trigger once !
 			return this.ready && this.collectionMeta && ['fetched' , 'refreshing'].includes( this.collectionMeta.status ) ;
 		} ,
 		collectionMeta: function() {
-			return this.store.collections[ urls.queryObjectToQueryString( this.queryObject ) ] ;
+			return this.store.collections[ urls.queryObjectToQueryString( this.queryObject , true ) ] ;
 		} ,
 		collection: function() {
 			return this.$store.getters[`${this.restQuery.collection}/collection`]( this.queryObject ) ;
@@ -51,7 +56,7 @@ export default {
 			var queryObject = urls.queryStringToQueryObject( this.$route.query ) ;
 
 			if ( ! isEqual( queryObject.filters , this.filters ) ) {
-				this.filters = deepmerge( {} , queryObject.filters ) ;
+				this.filters = cloneDeep( queryObject.filters ) ;
 			}
 
 			for ( let filter of [
@@ -75,22 +80,30 @@ export default {
 			} ) ;
 		} ,
 
-		queryOptionsSet: function( name , option ) {
-			let value = option ;
-			if ( typeof value === 'object' ) {
-				value = option.value ;
-			}
-			this[name] = value ;
-		} ,
 		sortSet: function( sortName , sortOrder ) {
-			this.queryOptionsSet( 'sortName' , sortName ) ;
-			this.queryOptionsSet( 'sortOrder' , sortOrder || ( this.sortOrder === - 1 ? 1 : - 1 ) ) ;
+			this.sortName = sortName ;
+			this.sortOrder = sortOrder || ( this.sortOrder === - 1 ? 1 : - 1 ) ;
+		} ,
+		searchSet: function( txt , options ) {
+			this.skipSet( 0 ) ;
+			if ( typeof options === 'object' ) {
+				this.search = options.value ;
+			}
+			else {
+				this.search = txt ;
+			}
+		} ,
+		skipSet: function( toSkip ) {
+			this.skip = toSkip ;
 		} ,
 
 		filterDelete: function( filterName ) {
+			this.skipSet( 0 ) ;
 			this.$delete( this.filters , filterName ) ;
 		} ,
+
 		filterSet: function( name , filter ) {
+			this.skipSet( 0 ) ;
 			if ( filter.value ) {
 				this.$set( this.filters , filter.name , filter ) ;
 			}

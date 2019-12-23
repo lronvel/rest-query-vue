@@ -1,5 +1,5 @@
-import doormen from 'doormen/lib/browser.js' ;
-import fetcher from '../../lib/fetcher.js' ;
+import doormen from '../../lib/doormen' ;
+import fetcher from '../../lib/fetcher' ;
 
 export default {
 	connect: async function( context , data ) {
@@ -33,6 +33,7 @@ export default {
 				return true ;
 			} )
 			.catch( error => {
+				console.log( 'CREATE TOKEN ERROR' ) ;
 				console.log( error ) ;
 				context.dispatch( 'reset' ) ;
 				context.commit( 'setConnectionError' , true ) ;
@@ -135,7 +136,8 @@ export default {
 			.catch( error => {
 				console.log( error ) ;
 				console.log( 'Session is not Ok.' ) ;
-				context.dispatch( 'reset' ) ;
+				// FIXME
+				// context.dispatch( 'reset' ) ;
 				return false ;
 			} ) ;
 	} ,

@@ -1,3 +1,4 @@
+import localStorage from '../../lib/localStorage' ;
 /*
 The full session Object:
 {
@@ -12,7 +13,6 @@ The full session Object:
 localCreationTime: null ,
 localExpirationTime: null ,
 */
-
 
 export default function() {
 	return {

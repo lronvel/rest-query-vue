@@ -1,3 +1,5 @@
+import { cloneDeep , merge } from 'lodash-es' ;
+
 // HINTS:
 // setCollectionStatus: use spread operator
 // setDocument & setCollection: merge new document or replace ?
@@ -36,7 +38,13 @@ export default {
 			} } ;
 	} ,
 
+	mergeDocument( state , document ) {
+		document = merge( {} , state.documents[document._id] , document ) ;
+		state.documents = { ...state.documents , [document._id]: document } ;
+	} ,
+
 	setDocument( state , document ) {
+		document = cloneDeep( document ) ;
 		state.documentsSlugs = { ...state.documentsSlugs , [document.slugId]: document._id } ;
 		state.documents = { ...state.documents , [document._id]: document } ;
 	} ,

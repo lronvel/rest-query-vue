@@ -1,12 +1,14 @@
-import urls from '../../lib/urls.js' ;
-import doormen from 'doormen/lib/browser.js' ;
+import urls from '../../lib/urls' ;
+import doormen from '../../lib/doormen' ;
+import { cloneDeep } from 'lodash-es' ;
 
-doormen.setClientMode( true ) ;
 
-window.doormen = doormen ;
 export default {
+	hasInit: () => {
+		return true ;
+	} ,
 	collection: ( state ) => ( queryObject ) => {
-		var queryString = urls.queryObjectToQueryString( queryObject ) ,
+		var queryString = urls.queryObjectToQueryString( queryObject , true ) ,
 			collection = state.collections[ queryString ] ;
 
 		if ( ! collection || ! collection.data ) return [] ;
@@ -21,10 +23,14 @@ export default {
 	} ,
 
 	validateDocument: ( state ) => ( values ) => {
-		return doormen.report( state.schema , values ) ;
+		// return doormen.report( state.schema , values ) ;
+		return doormen.report( state.schema , cloneDeep( values ) ) ;
+		// return doormen.export( state.schema , values ) ;
 	} ,
 
 	validatePatch: ( state ) => ( values ) => {
-		return doormen.patch.report( state.schema , values ) ;
+		// return doormen.patch.report( state.schema , values ) ;
+		return doormen.patch.report( state.schema , cloneDeep( values ) ) ;
+		// return doormen.patch.export( state.schema , values ) ;
 	}
 } ;

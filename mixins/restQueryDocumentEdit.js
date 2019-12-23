@@ -1,7 +1,7 @@
+import { isEqual , merge } from 'lodash-es' ;
 import restQueryDocument from '../mixins/restQueryDocument' ;
-import urls from '../lib/urls.js' ;
-import deepmerge from 'deepmerge' ;
-import isEqual from 'lodash.isequal' ;
+import urls from '../lib/urls' ;
+import formData from '../lib/formData' ;
 
 export default {
 	mixins: [restQueryDocument] ,
@@ -10,9 +10,19 @@ export default {
 			unloadGuard: false ,
 			formDataHasChange: false ,
 			formData: {} ,
+			originalFormData: {} ,
 			formDataReady: false ,
 			formErrors: {}
 		} ;
+	} ,
+
+	computed: {
+		validateDocument: function() {
+			return this.validate( this.formData , 'document' ) ;
+		} ,
+		validatePatch: function() {
+			return this.validate( this.formData , 'patch' ) ;
+		}
 	} ,
 
 	watch: {
@@ -66,21 +76,51 @@ export default {
 		initFormData: function() {
 			if ( ! this.documentReady ) return ;
 
-			this.formData = deepmerge.all( [
-				{} ,
+
+			this.formData = merge( {} ,
 				this.defaultFormData || {} ,
-				this.document ,
+				formData.documentToFormData( this.document , this.schema ) ,
 				urls.queryStringToFormData( this.$route.query )
-			] ) ;
+			) ;
+			this.originalFormData = merge( {} , this.formData ) ;
+
 			this.formDataReady = true ;
+		} ,
+
+		isContentProperty: function( property , name ) {
+			if ( this.schema.collectionName === 'groups' ) {
+				if ( name === 'users' || name === 'name' ) return true ;
+				return false ;
+			}
+			if ( property.tags.includes( 'content' ) || property.tags.includes( 'system-content' ) ) {
+				if ( property.type !== 'backLink' && property.inputHint !== 'hidden' ) {
+					return true ;
+				}
+			}
+			return false ;
+			// return ( property.system !== true && property.inputHint !== 'hidden' && property.type !== 'backLink' ) ;
 		} ,
 
 		propertySet: function( key , value ) {
 			if ( isEqual( this.formData[key] , value ) ) return ;
 
-			console.log( `FormData set ${key}: ${value}` ) ;
+			console.log( `FormData ${key} was: ${this.formData[key]}` ) ;
+			console.log( `FormData ${key} set: ${value}` ) ;
+
 			this.$set( this.formData , key , value ) ;
-			this.formDataHasChange = true ;
+
+			this.formDataHasChange = ! isEqual( this.formData , this.originalFormData ) ;
+		} ,
+		propertyAppend: function( key , values ) {
+			if ( ! Array.isArray( this.formData[key] ) ) return ;
+			var data = Array.from( this.formData[key] ) ;
+			for( var value of values ) {
+				if ( this.formData[key].includes( value ) ) continue ;
+				if ( this.formData[key].some( link => link._id === value ) ) continue ;
+
+				data.push( value ) ;
+			}
+			this.propertySet( key , data ) ;
 		}
 	}
 } ;

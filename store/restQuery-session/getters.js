@@ -1,4 +1,7 @@
 export default {
+	getUserId: state => {
+		return state.session.userId ;
+	} ,
 	connected: state => {
 		return state.session ;
 	} ,

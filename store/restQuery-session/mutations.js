@@ -1,3 +1,5 @@
+import localStorage from '../../lib/localStorage' ;
+
 export default {
 	setRegenerateTimeout( state , value ) {
 		state.regenerateTimeout = value ;

@@ -1,7 +1,7 @@
 import { state , getters , mutations , actions } from '../store/restQuery' ;
-import restQueryNavigation from '../mixins/restQueryNavigation.js' ;
-import urls from '../lib/urls.js' ;
-import strings from '../lib/strings.js' ;
+import restQueryNavigation from '../mixins/restQueryNavigation' ;
+import urls from '../lib/urls' ;
+import strings from '../lib/strings' ;
 
 export default {
 	inheritAttrs: false ,
@@ -10,19 +10,24 @@ export default {
 
 	data: function() {
 		return {
+			access: this.$attrs.access || null ,
+			fetchSchema: true ,
+			toServerPrefetch: false ,
 			populate: this.$attrs.populate || null ,
 			restQuery: urls.pathToStore( this.$route.path )
 		} ;
 	} ,
 
 	serverPrefetch() {
-		this.createStore() ;
-		return this.fetch() ;
+		return this.toServerPrefetch ;
 	} ,
 
 	created() {
 		this.createStore() ;
-		this.fetch() ;
+
+		if ( ! this.collectionMeta ) {
+			this.toServerPrefetch = this.fetch() ;
+		}
 	} ,
 
 	watch: {
@@ -76,6 +81,7 @@ export default {
 			if ( this.limit ) queryObject.limit = this.limit ;
 			if ( this.skip ) queryObject.skip = this.skip ;
 			if ( this.populate ) queryObject.populate = this.populate ;
+			if ( this.access ) queryObject.access = this.access ;
 
 			return queryObject ;
 		}
@@ -83,24 +89,30 @@ export default {
 
 	methods: {
 		createStore: function() {
-			if ( this.store ) return ;
+			if ( this.$store.getters[`${this.restQuery.collection}/hasInit`] ) return ;
+			// if ( this.store ) return ;
 
 			this.$store.registerModule( this.restQuery.collection , {
-				// FIXME: WARNING
-				// Don't forget to use the preserveState: true option for registerModule so we keep the state injected by the server.
-				// preserveState: true,
 				strict: true ,
 				namespaced: true ,
-
-				state: Object.assign( {} , state() , {
-					path: this.restQuery.collection
-				} ) ,
-
 				getters ,
 				actions ,
-				mutations
+				mutations ,
+				state: Object.assign( {} , state() , {
+					path: this.restQuery.collection ,
+					ready: ! this.fetchSchema
+				} )
+			} , {
+				preserveState: !! ( typeof window !== 'undefined' && window.__INITIAL_STATE__ && window.__INITIAL_STATE__[this.restQuery.collection] )
 			} ) ;
-			this.$store.dispatch( `${this.restQuery.collection}/fetchSchema` ) ;
+
+			if ( this.fetchSchema ) {
+				this.$store.dispatch( `${this.restQuery.collection}/fetchSchema` ) ;
+			}
+		} ,
+
+		fetch: function() {
+			// noop
 		} ,
 
 		getSchemaProperty: function( key ) {
