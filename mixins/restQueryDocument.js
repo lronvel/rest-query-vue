@@ -1,41 +1,46 @@
 import restQuery from '../mixins/restQuery' ;
+import urls from '../lib/urls' ;
 import { cloneDeep } from 'lodash-es' ;
+
 export default {
 	mixins: [restQuery] ,
 
 	computed: {
-		hasFecthed: function() {
-			return this.documentReady ;
-		} ,
-		documentReady: function() {
-			// Trigger ready when store is ready
-			// and, if we have a document, when the document is ready
-			return this.ready && ( ! this.restQuery.document || !! this.document._id ) ;
-		} ,
 		document: function() {
 			return this.$store.getters[`${this.restQuery.collection}/document`]( this.restQuery.document ) || {} ;
+		} ,
+		queryObject: function() {
+			let queryObject = {} ;
+
+			if ( this.restQuery.document ) queryObject.id = this.restQuery.document ;
+
+			if ( this.populate ) queryObject.populate = this.populate ;
+			if ( this.deepPopulate ) queryObject.deepPopulate = this.deepPopulate ;
+			if ( this.access ) queryObject.access = this.access ;
+
+			return queryObject ;
 		}
 	} ,
 
+	/*
+	created() {
+		// FIXME: Not really the most elegant way...
+		if ( this.cachedDocument ) {
+			var queryString = urls.queryObjectToQueryString( this.queryObject ) ;
+			this.$store.commit( `${this.restQuery.collection}/setDocument` , { queryString , data: this.cachedDocument } ) ;
+			this.$store.commit( `${this.restQuery.collection}/setMeta` , { queryString , status: 'fetched' } ) ;
+		}
+		return Promise.resolve() ;
+	} ,
+	*/
 	methods: {
-		fetch: function( force ) {
+		fetch: function() {
 			if ( ! this.queryObject.id ) return null ;
-			return this.$store.dispatch( `${this.restQuery.collection}/fetchDocument` , {
-				force: force ,
-				...this.queryObject
-			} ) ;
+			return this.$store.dispatch( `${this.restQuery.collection}/fetchDocument` , this.queryObject ) ;
 		} ,
+
 		create: async function( incomingDocument ) {
 			var document = cloneDeep( incomingDocument ) ;
-
-			/* FIXME: TO REMOVE
-			if ( this.restQuery.collection === 'Users' ) {
-				document.login = document.email ;
-				document.password = {
-					hash: 'aaaaaaaaaaaaaa'
-				} ;
-			}
-			*/
 
 			if ( ! this.validate( document , 'document' ) ) return false ;
 			this.formDataHasChange = false ;
@@ -51,11 +56,6 @@ export default {
 		update: async function( incomingDocument ) {
 			var document = cloneDeep( incomingDocument ) ;
 
-			/* FIXME: TO REMOVE
-			if ( this.restQuery.collection === 'Users' ) {
-				document.login = this.document.login ;
-			}
-			*/
 			if ( ! this.validate( document , 'patch' ) ) return false ;
 			this.formDataHasChange = false ;
 

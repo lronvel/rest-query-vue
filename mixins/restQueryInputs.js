@@ -11,11 +11,15 @@ export default {
 		property: {
 			type: Object ,
 			default: function() { return {} ; }
+		} ,
+		schemaName: {
+			type: String ,
+			default: ''
 		}
 	} ,
 	data: function() {
 		return {
-			disabled: this.property.tags && this.property.tags.includes( 'system-content' ) ,
+			disabled: this.$attrs.disabled || ( this.property.tags && this.property.tags.includes( 'system-content' ) ) ,
 
 			throttledSearch: throttle( this.searchInCollection , 500 , {
 				maxWait: 500 ,

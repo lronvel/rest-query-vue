@@ -1,62 +1,81 @@
-import fetcher from '../../lib/fetcher' ;
 import urls from '../../lib/urls' ;
 import formData from '../../lib/formData' ;
 
+var requests = {} ;
+
 export default {
 	fetchSchema( context ) {
-		return fetcher( `${context.state.path}/SCHEMA` )
+		return this._vm.$fetch( `${context.state.path}/SCHEMA` )
 			.then( schema => {
 				context.commit( 'setSchema' , schema ) ;
 				return schema ;
 			} )
 			.catch( error => {
 				console.log( error ) ;
+			} )
+			.finally( ()=> {
 			} ) ;
+	} ,
+
+	fetch( context , { type , queryObject } ) {
+		var url = context.state.path ;
+		var queryString = urls.queryObjectToQueryString( queryObject , true ) ;
+
+		if ( queryObject.id ) url += `/${queryObject.id}` ;
+		if ( queryString ) url += `?${queryString}` ;
+
+		var meta = context.state.meta[url] ;
+		var status = 'fetching' ;
+
+		if ( meta ) {
+			var isExpired = new Date() - new Date( meta.lastFetch ) < context.rootState.config.FETCH_CACHE_TIME * 1000 ;
+
+			if ( meta.status === 'fetching' || meta.status === 'refreshing' ) {
+				return requests[url] ;
+			}
+			// meta.lastFetch need to be instanciated as date in case state is from server
+			// and meta.lastFetch is a string
+			else if ( ! queryObject.forceFetch && isExpired ) {
+				if ( queryObject.id ) {
+					return Promise.resolve( context.state.documents[queryObject.id] ) ;
+				}
+				return Promise.resolve( context.state.collections[url] ) ;
+			}
+
+			status = meta.status === 'fetched' ? 'refreshing' : 'fetching' ;
+		}
+
+		context.commit( 'setMeta' , { url , status: status } ) ;
+
+		requests[url] = this._vm.$fetch( url )
+			.then( data => {
+				context.commit( type , { url , data } ) ;
+				context.commit( 'setMeta' , { url , status: 'fetched' } ) ;
+				return data ;
+			} )
+			.catch( error => {
+				context.commit( 'setMeta' , { url , status: 'error' } ) ;
+				console.log( error ) ;
+			} ).finally( () => {
+				delete requests[url] ;
+			} ) ;
+
+
+		return requests[url] ;
 	} ,
 
 	fetchDocument( context , queryObject = {} ) {
-		var url = [`${context.state.path}/${queryObject.id}`] ;
-
-		var queryString = urls.queryObjectToQueryString( queryObject ) ;
-		if ( queryString ) url.push( queryString ) ;
-
-		return fetcher( url.join( '?' ) )
-			.then( document => {
-				context.commit( 'setDocument' , document ) ;
-				return document ;
-			} )
-			.catch( error => {
-				console.log( error ) ;
-			} ) ;
+		return context.dispatch( 'fetch' , {
+			type: 'mergeDocument' ,
+			queryObject
+		} ) ;
 	} ,
 
 	fetchCollection( context , queryObject = {} ) {
-		var url = [context.state.path] ;
-
-		var queryString = urls.queryObjectToQueryString( queryObject , true ) ;
-		if ( queryString ) url.push( queryString ) ;
-
-		var collectionMeta = context.state.collections[queryString] ;
-		var status = 'fetching' ;
-
-		if ( collectionMeta ) {
-			if ( collectionMeta.status === 'fetching' ) return false ;
-			if ( ! queryObject.force && new Date() - collectionMeta.lastFetch < 10000 ) return false ;
-
-			status = collectionMeta.status === 'fetched' ? 'refreshing' : 'fetching' ;
-		}
-
-		context.commit( 'setCollectionStatus' , { queryString , status: status } ) ;
-
-		return fetcher( url.join( '?' ) )
-			.then( collection => {
-				context.commit( 'setCollection' , { queryString , collection } ) ;
-				return collection ;
-			} )
-			.catch( error => {
-				console.log( error ) ;
-				context.commit( 'setCollectionStatus' , { queryString , status: 'error' } ) ;
-			} ) ;
+		return context.dispatch( 'fetch' , {
+			type: 'setCollection' ,
+			queryObject
+		} ) ;
 	} ,
 
 	fetchNext( context , queryObject ) {
@@ -67,22 +86,23 @@ export default {
 	create( context , document ) {
 		document = formData.unFlatten( document ) ;
 
-		return fetcher( `${context.state.path}` , {
+		return this._vm.$fetch( `${context.state.path}` , {
 			method: 'POST' ,
 			body: document
-		} )
-			.then( response => {
-				context.commit( 'create' , { id: response.id , document: document } ) ;
-				return response ;
-			} ).catch( error => {
-				console.log( error ) ;
-			} ) ;
+		} ).then( response => {
+			context.dispatch( 'fetchDocument' , { id: response.id } ) ;
+			return response ;
+		} ).catch( error => {
+			console.log( error ) ;
+		} ) ;
 	} ,
 
 	createIfNotExist( context , document ) {
-		return fetcher( `${context.state.path}?.name.$eq=${document.name}` )
+		alert( 'Do not use this function without review' ) ;
+
+		return this._vm.$fetch( `${context.state.path}?.name.$eq=${document.name}` )
 			.then( response => {
-				context.dispatch( `create` , document ) ;
+				context.dispatch( 'create' , document ) ;
 				return response ;
 			} )
 			.catch( error => {
@@ -93,59 +113,59 @@ export default {
 	update( context , patch ) {
 		// doormen.patch.report( context.state.schema , document ) ;
 
-		return fetcher( `${context.state.path}/${patch.id}` , {
+		return this._vm.$fetch( `${context.state.path}/${patch.id}` , {
 			method: 'PATCH' ,
 			body: formData.flatten( patch.body )
-		} )
-			.then( () => {
-				context.dispatch( `fetchDocument` , { id: patch.id } ) ;
-				// context.commit( 'mergeDocument' , document ) ;
-				return true ;
-			} )
-			.catch( error => {
-				console.log( error ) ;
-			} ) ;
+		} ).then( () => {
+			return context.dispatch( 'fetchDocument' , { id: patch.id , forceFetch: true } ) ;
+		} ).catch( error => {
+			console.log( error ) ;
+		} ) ;
 	} ,
 
 	delete( context , id ) {
-		return fetcher( `${context.state.path}/${id}` , {
+		return this._vm.$fetch( `${context.state.path}/${id}` , {
 			method: 'DELETE'
-		} )
-			.then( () => {
-				context.commit( 'deleteDocument' , id ) ;
-				return true ;
-			} )
-			.catch( error => {
-				console.log( error ) ;
-			} ) ;
+		} ).then( () => {
+			context.commit( 'deleteDocument' , id ) ;
+			return true ;
+		} ).catch( error => {
+			console.log( error ) ;
+		} ) ;
 	} ,
 
 	collectionMethod( context , options = {} ) {
+		// FIXME:
+		/* USE POST INSTEAD OF GET CAUSE GET GET CACHED */
+		/* MAYBE ADD API */
 		var url = [`${context.state.path}/${options.method}`] ;
 		if ( options.query ) url.push( options.query ) ;
 
 		var fetcherOptions = {
-			method: 'GET'
+			method: 'POST'
 		} ;
 
 		if ( options.body ) {
 			fetcherOptions.method = 'POST' ;
 			fetcherOptions.body = options.body ;
 		}
-		return fetcher( url.join( '?' ) , fetcherOptions ) ;
+		return this._vm.$fetch( url.join( '?' ) , fetcherOptions ) ;
 	} ,
 	documentMethod( context , options = {} ) {
+		// FIXME:
+		/* USE POST INSTEAD OF GET CAUSE GET GET CACHED */
+		/* MAYBE ADD API */
 		var url = [`${context.state.path}/${options.id}/${options.method}`] ;
 		if ( options.query ) url.push( options.query ) ;
 
 		var fetcherOptions = {
-			method: 'GET'
+			method: 'POST'
 		} ;
 
 		if ( options.body ) {
 			fetcherOptions.method = 'POST' ;
 			fetcherOptions.body = options.body ;
 		}
-		return fetcher( url.join( '?' ) , fetcherOptions ) ;
+		return this._vm.$fetch( url.join( '?' ) , fetcherOptions ) ;
 	}
 } ;

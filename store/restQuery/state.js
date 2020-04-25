@@ -4,8 +4,11 @@ export default function() {
 		ready: false ,
 		schema: {} ,
 
+		meta: {} ,
+
 		collections: {} ,
 		documents: {} ,
+
 		documentsSlugs: {}
 	} ;
 }

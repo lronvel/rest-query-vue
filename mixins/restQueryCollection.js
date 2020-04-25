@@ -1,5 +1,6 @@
 import restQuery from '../mixins/restQuery' ;
 import urls from '../lib/urls' ;
+import strings from '../lib/strings' ;
 import { cloneDeep , isEqual } from 'lodash-es' ;
 
 export default {
@@ -21,6 +22,28 @@ export default {
 	watch: {
 		'$route.query': function() {
 			this.updateFiltersByQuery() ;
+		} ,
+		'queryObject': {
+			handler: function() {
+				if ( this.getUrlFilters ) {
+					var filters = this.$route.path + '?' + urls.queryObjectToQueryString( {
+						limit: this.limit ,
+						skip: this.skip ,
+						filters: this.filters ,
+						search: this.search ,
+						sortName: this.sortName ,
+						sortOrder: this.sortOrder
+					} ) ;
+
+					filters = strings.trimEnd( filters , '?' ) ;
+					if ( decodeURIComponent( this.$route.fullPath ) !== filters ) {
+						this.$router.replace( filters ) ;
+					}
+				}
+
+				this.fetch() ;
+			} ,
+			deep: true
 		}
 	} ,
 	created() {
@@ -28,24 +51,26 @@ export default {
 	} ,
 
 	computed: {
-		hasFecthed: function() {
-			return this.collectionMeta ;
-		} ,
-		collectionHasFetched: function() {
-			return this.ready ;
-		} ,
-		collectionReady: function() {
-			// FIXME: need to trigger once !
-			return this.ready && this.collectionMeta && ['fetched' , 'refreshing'].includes( this.collectionMeta.status ) ;
-		} ,
-		collectionMeta: function() {
-			return this.store.collections[ urls.queryObjectToQueryString( this.queryObject , true ) ] ;
-		} ,
 		collection: function() {
 			return this.$store.getters[`${this.restQuery.collection}/collection`]( this.queryObject ) ;
 		} ,
 		hasFilters: function() {
 			return ( this.search && this.search.length ) || Object.keys( this.filters ).length ;
+		} ,
+		queryObject: function() {
+			let queryObject = {} ;
+
+			if ( this.search ) queryObject.search = this.search ;
+			if ( this.filters ) queryObject.filters = this.filters ;
+			if ( this.sortOrder ) queryObject.sortOrder = this.sortOrder ;
+			if ( this.sortName ) queryObject.sortName = this.sortName ;
+			if ( this.limit ) queryObject.limit = this.limit ;
+			if ( this.skip ) queryObject.skip = this.skip ;
+			if ( this.populate ) queryObject.populate = this.populate ;
+			if ( this.deepPopulate ) queryObject.deepPopulate = this.deepPopulate ;
+			if ( this.access ) queryObject.access = this.access ;
+
+			return queryObject ;
 		}
 	} ,
 
@@ -73,11 +98,8 @@ export default {
 		getOneDocument: function( id ) {
 			return this.$store.getters[`${this.restQuery.collection}/document`]( id ) || {} ;
 		} ,
-		fetch: async function( force ) {
-			return this.$store.dispatch( `${this.restQuery.collection}/fetchCollection` , {
-				force: force ,
-				...this.queryObject
-			} ) ;
+		fetch: async function() {
+			return this.$store.dispatch( `${this.restQuery.collection}/fetchCollection` , this.queryObject ) ;
 		} ,
 
 		sortSet: function( sortName , sortOrder ) {

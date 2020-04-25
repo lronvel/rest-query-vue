@@ -17,6 +17,9 @@ export default {
 	} ,
 
 	computed: {
+		formType: function() {
+			return this.restQuery.document ? 'Edit' : 'Create' ;
+		} ,
 		validateDocument: function() {
 			return this.validate( this.formData , 'document' ) ;
 		} ,
@@ -29,7 +32,10 @@ export default {
 		'$route.query': function() {
 			this.initFormData() ;
 		} ,
-		documentReady: function() {
+		isInit: function() {
+			this.initFormData() ;
+		} ,
+		fetched: function() {
 			this.initFormData() ;
 		} ,
 		formDataHasChange: function() {
@@ -74,8 +80,9 @@ export default {
 			event.returnValue = '' ;
 		} ,
 		initFormData: function() {
-			if ( ! this.documentReady ) return ;
+			if ( ! this.isInit ) return ;
 
+			if ( this.formType === 'Edit' && ! this.fetched ) return ;
 
 			this.formData = merge( {} ,
 				this.defaultFormData || {} ,
@@ -87,6 +94,19 @@ export default {
 			this.formDataReady = true ;
 		} ,
 
+		isEditableProperty: function( property , name ) {
+			if ( this.schema.collectionName === 'groups' ) {
+				if ( name === 'users' || name === 'name' ) return true ;
+				return false ;
+			}
+
+			if ( property.tags.includes( 'content' ) ) {
+				if ( property.type !== 'backLink' && property.inputHint !== 'hidden' ) {
+					return true ;
+				}
+			}
+			return false ;
+		} ,
 		isContentProperty: function( property , name ) {
 			if ( this.schema.collectionName === 'groups' ) {
 				if ( name === 'users' || name === 'name' ) return true ;

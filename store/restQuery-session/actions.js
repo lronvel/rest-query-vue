@@ -1,5 +1,4 @@
 import doormen from '../../lib/doormen' ;
-import fetcher from '../../lib/fetcher' ;
 
 export default {
 	connect: async function( context , data ) {
@@ -17,7 +16,7 @@ export default {
 		}
 		context.dispatch( 'reset' ) ;
 
-		return fetcher( '/Users/CREATE-TOKEN' , { method: 'POST' , body: data } )
+		return this._vm.$fetch( '/Users/CREATE-TOKEN' , { method: 'POST' , body: data } )
 			.then( request => {
 				console.log( 'Logged in!' ) ;
 
@@ -48,7 +47,7 @@ export default {
 			return false ;
 		}
 
-		return fetcher( '/Users/REGENERATE-TOKEN' , { method: 'POST' } )
+		return this._vm.$fetch( '/Users/REGENERATE-TOKEN' , { method: 'POST' } )
 			.then( request => {
 				var session = Object.assign( {} , context.state.session , request ) ;
 
@@ -70,7 +69,7 @@ export default {
 			return true ;
 		}
 
-		return fetcher( '/Users/REVOKE-TOKEN' , { method: 'POST' } )
+		return this._vm.$fetch( '/Users/REVOKE-TOKEN' , { method: 'POST' } )
 			.then( () => {
 				return true ;
 			} )
@@ -109,7 +108,7 @@ export default {
 			return false ;
 		}
 
-		return fetcher( '/Users/CHECK-TOKEN' , { method: 'POST' } )
+		return this._vm.$fetch( '/Users/CHECK-TOKEN' , { method: 'POST' } )
 			.then( () => {
 				context.dispatch( 'scheduleRegenerate' ) ;
 				return true ;
@@ -128,7 +127,7 @@ export default {
 			return false ;
 		}
 
-		return fetcher( `/Users/${context.state.session.userId}` , { method: 'GET' } )
+		return this._vm.$fetch( `/Users/${context.state.session.userId}` , { method: 'GET' } )
 			.then( request => {
 				context.commit( 'setProfile' , request ) ;
 				return request ;
